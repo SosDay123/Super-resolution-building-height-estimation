@@ -1,16 +1,22 @@
+"""Utility functions for aggregating image data to a lower resolution.
+
+The module only depends on NumPy for the CPU implementation. Imports of
+optional heavy dependencies such as ``torch`` are deferred until they are
+needed so that ``aggregate`` can be used without requiring those packages.
+"""
+
 import os
 import time
 
-import cv2
 import numpy as np
-import torch
-import matplotlib.pyplot as plt
-from torch.nn import Parameter
-import rasterio as rio
 
 def aggregate(data, scale):
     r, c = data.shape
-    nr, nc = int(r*scale), int(r*scale)
+    # The output height and width should be computed from the respective
+    # dimensions of the input array. The previous implementation used the
+    # number of rows twice, which produced square outputs even when the
+    # input was rectangular.
+    nr, nc = int(r * scale), int(c * scale)
     step = int(1/scale)
     res = np.zeros((nr, nc))
     data = data.astype('float')
@@ -27,6 +33,9 @@ def aggregate(data, scale):
 
 
 def aggregate_torch(data, scale):
+    import torch
+    from torch.nn import Parameter
+
     step = int(1/scale)
     conv = torch.nn.Conv2d(1, 1,
                            kernel_size=step, stride=step, bias=False,
@@ -42,6 +51,9 @@ def aggregate_torch(data, scale):
 
 
 def aggregate_torch_gpu(data, scale, device='cuda'):
+    import torch
+    from torch.nn import Parameter
+
     # h, w = data.shape
     # data = np.reshape(data, (1, 1, h, w))
     # data = torch.from_numpy(data).float()
@@ -60,6 +72,9 @@ def aggregate_torch_gpu(data, scale, device='cuda'):
 
 
 if __name__=="__main__":
+    import rasterio as rio
+    import matplotlib.pyplot as plt
+
     iname = 'Beijing_47.tif'
     datapath = os.path.join(r'D:\data\Landcover\samples62\bh', iname)
     respath = os.path.join('tmp', iname)
